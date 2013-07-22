@@ -4,4 +4,4 @@ class Config:
 #		Linux:
 #		self.device = "";
 #		Windows:
-		self.device = "com33";
+		self.device = "com34";

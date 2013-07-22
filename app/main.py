@@ -38,13 +38,13 @@ class KnittingApp(Tkinter.Tk):
 			
 			self.emu.open(cport=c.device)
 			print 'PDDemulate Version 1.1 Ready!'
-			self.after(5, self.runEmulator)
+			self.after(5, self.emulatorLoop)
 		except Exception, e:
 			print "Exception:", e
 			self.quitApplication()
 		
 	def emulatorLoop(self):
-		emu.handleRequests()
+		self.emu.handleRequest()
 		
 	def quitApplication(self):
 		if self.emu is not None:
