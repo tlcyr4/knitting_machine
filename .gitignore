@@ -9,3 +9,6 @@ test-data
 *.xcf
 *.png
 *.dat
+
+# python files
+*.pyc
