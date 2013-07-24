@@ -43,13 +43,15 @@ class KnittingApp(Tkinter.Tk):
 			self.emu.open(cport=port)
 			self.msg.showInfo('PDDemulate Version 1.1 Ready!')
 			self.setEmulatorStarted(True)
-			self.after(5, self.emulatorLoop)
+			self.after_idle(self.emulatorLoop)
 		except Exception, e:
 			self.msg.showError('Ensure that TFDI cable is connected to port ' + port + '\n\nError: ' + str(e))
 			self.setEmulatorStarted(False)
 		
 	def emulatorLoop(self):
-		self.emu.handleRequest()
+		if self.emu.started:
+			self.emu.handleRequest()
+			self.after_idle(self.emulatorLoop)
 		
 	def stopEmulator(self):
 		if self.emu is not None:
