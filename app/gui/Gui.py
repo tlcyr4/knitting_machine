@@ -3,6 +3,7 @@ import Tkinter
 class Gui:
 	def initializeMainWindow(self,w):
 		w.title('Knitting pattern uploader')
+		w.geometry("800x200")
 		w.grid()
 
 		row = 0
@@ -22,7 +23,7 @@ class Gui:
 		self.emuButton.grid(column=2,row=row)
 		self.emuButtonStopped()
 
-		row = 1
+		row += 1
 		
 		label = Tkinter.Label(w, text=u"Dat file:")
 		label.grid(column=0, row=row, sticky='W')
@@ -32,7 +33,7 @@ class Gui:
 		w.datFileEntry.grid(column=1,row=row,sticky='EW',columnspan=2)
 		w.datFileEntry.entryText = entryText
 		
-		row = 2
+		row += 1
 		
 		labelText = Tkinter.StringVar()
 		label = Tkinter.Label(w, anchor="w",fg="white",bg="blue",textvariable=labelText)
@@ -40,7 +41,7 @@ class Gui:
 		label.caption = labelText
 		w.infoLabel = label
 		
-		w.grid_columnconfigure(0,weight=1)
+		w.grid_columnconfigure(1,weight=1)
 		w.resizable(True,False)
 
 	def emuButtonStopped(self):

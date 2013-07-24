@@ -22,6 +22,7 @@ class KnittingApp(Tkinter.Tk):
 		self.gui = Gui()
 		self.gui.initializeMainWindow(self)
 		self.deviceEntry.entryText.set(self.getConfig().device)
+		self.datFileEntry.entryText.set(self.getConfig().datFile)
 		self.initEmulator()
 		
 	def initEmulator(self):
@@ -76,6 +77,8 @@ class KnittingApp(Tkinter.Tk):
 			self._cfg = Config()
 			if not hasattr(self._cfg, "device"):
 				self._cfg.device = u""
+			if not hasattr(self._cfg, "datFile"):
+				self._cfg.datFile = u""
 		return self._cfg
 		
 
@@ -89,5 +92,5 @@ class PDDListener(PDDEmulatorListener):
 	
 	
 if __name__ == "__main__":
-	app = KnittingApp(None)
+	app = KnittingApp()
 	app.mainloop()
