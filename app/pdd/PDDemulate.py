@@ -193,10 +193,17 @@ class DiskSector():
 		print
 
 class Disk():
+	"""
+	Fields:
+		self.lastDatFilePath : string
+	"""
+	
 	def __init__(self, basename):
 		self.numSectors = 80
 		self.Sectors = []
 		self.filespath = ""
+		""
+		self.lastDatFilePath = None
 		# Set up disk Files and internal buffers
 
 		# if absolute path, just accept it
@@ -261,6 +268,7 @@ class Disk():
 			outfn =  os.path.join(self.filespath, filename)
 			cmd = 'cat %s %s > %s' % (fn1, fn2, outfn)
 			os.system(cmd)
+			self.lastDatFilePath = outfn
 		return
 
 	def readSector(self, psn, lsn):
@@ -269,6 +277,7 @@ class Disk():
 class PDDemulator():
 
 	def __init__(self, basename):
+		self.listeners = [] # list of PDDEmulatorListener
 		self.verbose = True
 		self.noserial = False
 		self.ser = None
@@ -607,6 +616,8 @@ class PDDemulator():
 			indata = self.readsomechars(1024)
 			try:
 				self.disk.writeSector(psn, lsn, indata)
+				for l in self.listeners:
+					l.dataReceived(self.disk.lastDatFilePath)
 			except:
 				print 'Failed to write data for sector %d, quitting' % psn
 				self.writebytes('80000000')
@@ -620,6 +631,10 @@ class PDDemulator():
 		# return to Operational Mode
 		return
 
+class PDDEmulatorListener:
+	def dataReceived(self, fullFilePath):
+		pass
+		
 # meat and potatos here
 
 if __name__ == "__main__":

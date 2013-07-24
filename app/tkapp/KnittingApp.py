@@ -5,6 +5,7 @@ from Config import Config
 from Messages import Messages
 from gui.Gui import Gui
 from pdd.PDDemulate import PDDemulator
+from pdd.PDDemulate import PDDEmulatorListener
 import Tkinter
 
 class KnittingApp(Tkinter.Tk):
@@ -16,7 +17,7 @@ class KnittingApp(Tkinter.Tk):
 		#self.startEmulator()
 		
 	def initialize(self):
-		self.msg = Messages()
+		self.msg = Messages(self)
 		self._cfg = None
 		self.gui = Gui()
 		self.gui.initializeMainWindow(self)
@@ -25,8 +26,9 @@ class KnittingApp(Tkinter.Tk):
 		
 	def initEmulator(self):
 		self.emu = PDDemulator(self.getConfig().imgdir)
+		self.emu.listeners.append(PDDListener(self))
 		self.setEmulatorStarted(False)
-		
+	
 	def emuButtonClicked(self):
 		self.getConfig().device = self.deviceEntry.entryText.get()
 		if self.emu.started:
@@ -35,15 +37,15 @@ class KnittingApp(Tkinter.Tk):
 			self.startEmulator()
 		
 	def startEmulator(self):
-		print 'Preparing emulator. . . Please Wait'
+		self.msg.showInfo('Preparing emulator. . . Please Wait')
 		try:
-			self.emu.open(cport=self.getConfig().device)
-			print 'PDDemulate Version 1.1 Ready!'
+			port = self.getConfig().device
+			self.emu.open(cport=port)
+			self.msg.showInfo('PDDemulate Version 1.1 Ready!')
 			self.setEmulatorStarted(True)
 			self.after(5, self.emulatorLoop)
 		except Exception, e:
-			print "Exception:", e
-			
+			self.msg.showError('Ensure that TFDI cable is connected to port ' + port + '\n\nError: ' + str(e))
 			self.setEmulatorStarted(False)
 		
 	def emulatorLoop(self):
@@ -52,7 +54,7 @@ class KnittingApp(Tkinter.Tk):
 	def stopEmulator(self):
 		if self.emu is not None:
 			self.emu.close()
-			print 'PDDemulate stopped.'
+			self.msg.showInfo('PDDemulate stopped.')
 			self.setEmulatorStarted(False)
 		self.initEmulator()
 		
@@ -75,6 +77,14 @@ class KnittingApp(Tkinter.Tk):
 		return self._cfg
 		
 
+class PDDListener(PDDEmulatorListener):
+
+	def __init__(self, app):
+		self.app = app
+
+	def dataReceived(self, fullFilePath):
+		self.app.datFileEntry.entryText.set(fullFilePath)
+	
 	
 if __name__ == "__main__":
 	app = KnittingApp(None)
