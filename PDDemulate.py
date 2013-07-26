@@ -193,10 +193,17 @@ class DiskSector():
         print
 
 class Disk():
+    """
+    Fields:
+        self.lastDatFilePath : string
+    """
+    
     def __init__(self, basename):
         self.numSectors = 80
         self.Sectors = []
         self.filespath = ""
+        ""
+        self.lastDatFilePath = None
         # Set up disk Files and internal buffers
 
         # if absolute path, just accept it
@@ -261,6 +268,7 @@ class Disk():
             outfn =  os.path.join(self.filespath, filename)
             cmd = 'cat %s %s > %s' % (fn1, fn2, outfn)
             os.system(cmd)
+            self.lastDatFilePath = outfn
         return
 
     def readSector(self, psn, lsn):
@@ -269,6 +277,7 @@ class Disk():
 class PDDemulator():
 
     def __init__(self, basename):
+        self.listeners = [] # list of PDDEmulatorListener
         self.verbose = True
         self.noserial = False
         self.ser = None
@@ -378,19 +387,24 @@ class PDDemulator():
     def handleRequests(self):
         synced = False
         while True:
-            inc = self.readchar()
-            if self.FDCmode:
-                self.handleFDCmodeRequest(inc)
-            else:
-                # in OpMode, look for ZZ
-                #inc = self.readchar()
-                if inc != 'Z':
-                    continue
-                inc = self.readchar()
-                if inc == 'Z':
-                    self.handleOpModeRequest()
+            self.handleRequest()
         # never returns
         return
+
+    def handleRequest(self):
+        if self.ser.inWaiting() == 0:
+            return
+        inc = self.readchar()
+        if self.FDCmode:
+            self.handleFDCmodeRequest(inc)
+        else:
+            # in OpMode, look for ZZ
+            #inc = self.readchar()
+            if inc != 'Z':
+                return
+            inc = self.readchar()
+            if inc == 'Z':
+                self.handleOpModeRequest()
 
     def handleOpModeRequest(self):
         req = ord(self.ser.read())
@@ -602,6 +616,8 @@ class PDDemulator():
             indata = self.readsomechars(1024)
             try:
                 self.disk.writeSector(psn, lsn, indata)
+                for l in self.listeners:
+                    l.dataReceived(self.disk.lastDatFilePath)
             except:
                 print 'Failed to write data for sector %d, quitting' % psn
                 self.writebytes('80000000')
@@ -615,23 +631,28 @@ class PDDemulator():
         # return to Operational Mode
         return
 
+class PDDEmulatorListener:
+    def dataReceived(self, fullFilePath):
+        pass
+        
 # meat and potatos here
 
-if len(sys.argv) < 3:
-    print '%s version %s' % (sys.argv[0], version)
-    print 'Usage: %s basedir serialdevice' % sys.argv[0]
-    sys.exit()
+if __name__ == "__main__":
+    if len(sys.argv) < 3:
+        print '%s version %s' % (sys.argv[0], version)
+        print 'Usage: %s basedir serialdevice' % sys.argv[0]
+        sys.exit()
 
-print 'Preparing . . . Please Wait'
-emu = PDDemulator(sys.argv[1])
+    print 'Preparing . . . Please Wait'
+    emu = PDDemulator(sys.argv[1])
 
-emu.open(cport=sys.argv[2])
+    emu.open(cport=sys.argv[2])
 
-print 'PDDtmulate Version 1.1 Ready!'
-try:
-    while 1:
-        emu.handleRequests()
-except (KeyboardInterrupt):
-    pass
+    print 'PDDtmulate Version 1.1 Ready!'
+    try:
+        while 1:
+            emu.handleRequests()
+    except (KeyboardInterrupt):
+        pass
 
-emu.close()
+    emu.close()
