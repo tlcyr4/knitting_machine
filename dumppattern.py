@@ -209,7 +209,7 @@ class PatternNotFoundException(Exception):
 class Result:
     def __init__(self):
         self.patterns = None # list of pat["number"], pat["stitches"], pat["rows"]
-        self.pattern = None # pattern object
+        self.pattern = None # pattern object: array of [rows][stitches] 
     
         
 if __name__ == "__main__":

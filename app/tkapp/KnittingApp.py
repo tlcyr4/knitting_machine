@@ -19,17 +19,21 @@ class KnittingApp(Tkinter.Tk):
         
     def initialize(self):
         self.msg = Messages(self)
-        self.patterns = None
+        self.patterns = []
+        self.pattern = None
         self._cfg = None
         self.currentDatFile = None
         self.patternDumper = PatternDumper()
         self.patternDumper.printInfoCallback = self.msg.showInfo
         self.gui = Gui()
         self.gui.initializeMainWindow(self)
+        self.patternListBox.bind('<<ListboxSelect>>', self.patternSelected)
+        self.after_idle(self.canvasConfigured)
         self.deviceEntry.entryText.set(self.getConfig().device)
         self.datFileEntry.entryText.set(self.getConfig().datFile)
         self.initEmulator()
-                
+        self.after_idle(self.reloadPatternFile)
+        
     def initEmulator(self):
         self.emu = PDDemulator(self.getConfig().imgdir)
         self.emu.listeners.append(PDDListener(self))
@@ -44,15 +48,20 @@ class KnittingApp(Tkinter.Tk):
         
     def startEmulator(self):
         self.msg.showInfo('Preparing emulator. . . Please Wait')
-        try:
-            port = self.getConfig().device
-            self.emu.open(cport=port)
-            self.msg.showInfo('PDDemulate Version 1.1 Ready!')
+
+        if self.getConfig().simulateEmulator:
+            self.msg.showInfo('Simulating emulator, emulator is not started...')
             self.setEmulatorStarted(True)
-            self.after_idle(self.emulatorLoop)
-        except Exception, e:
-            self.msg.showError('Ensure that TFDI cable is connected to port ' + port + '\n\nError: ' + str(e))
-            self.setEmulatorStarted(False)
+        else:
+            try:
+                port = self.getConfig().device
+                self.emu.open(cport=port)
+                self.msg.showInfo('PDDemulate Version 1.1 Ready!')
+                self.setEmulatorStarted(True)
+                self.after_idle(self.emulatorLoop)
+            except Exception, e:
+                self.msg.showError('Ensure that TFDI cable is connected to port ' + port + '\n\nError: ' + str(e))
+                self.setEmulatorStarted(False)
         
     def emulatorLoop(self):
         if self.emu.started:
@@ -78,27 +87,36 @@ class KnittingApp(Tkinter.Tk):
             self.gui.setEmuButtonStopped()
     
     def getConfig(self):
-        if self._cfg is None:
-            self._cfg = Config()
-            if not hasattr(self._cfg, "device"):
-                self._cfg.device = u""
-            if not hasattr(self._cfg, "datFile"):
-                self._cfg.datFile = u""
-        return self._cfg
+        cfg = self._cfg
+        if cfg is None:
+            self._cfg = cfg = Config()
+            if not hasattr(cfg, "device"):
+                cfg.device = u""
+            if not hasattr(cfg, "datFile"):
+                cfg.datFile = u""
+            if not hasattr(cfg, "simulateEmulator"):
+                cfg.simulateEmulator = False
+        return cfg
         
     def reloadPatternFile(self, pathToFile = None):
-        if pathToFile is None:
+        if not pathToFile:
             pathToFile = self.datFileEntry.entryText.get()
+        if not pathToFile:
+            return
         self.currentDatFile = pathToFile
         try:
             result = self.patternDumper.dumppattern([pathToFile])
             self.patterns = result.patterns
             listBoxModel = []
             for p in self.patterns:
-                listBoxModel.append("Pattern number (" + str(p["number"]) + ") (rows x stitches:  " + str(p["rows"]) + " x " + str(p["stitches"]) + ")" )
+                listBoxModel.append(self.getPatternTitle(p))
             self.patternListBox.items.set(listBoxModel)
-            self.patternListBox.selection_set(0)
-            self.patternCanvas.create_text(30,30,text='TEXT')
+            if (len(listBoxModel) > 0):
+                selected_index = 0
+                self.patternListBox.selection_set(selected_index)
+                self.displayPattern(self.patterns[selected_index])
+            else:
+                self.displayPattern(None)
         except IOError as e:
             self.msg.showError('Could not open pattern file %s' % pathToFile + '\n' + str(e))
         
@@ -107,13 +125,31 @@ class KnittingApp(Tkinter.Tk):
         
     def patternSelected(self, evt):
         w = evt.widget
-        index = int(w.curselection()[0])
-        value = self.patterns[index]
-        self.patternCanvas.clear()
-        self.patternCanvas.create_text(30,30,text='Pattern no: ' + str(value['number']), anchor=Tkinter.NW)
-        result = self.patternDumper.dumppattern([self.currentDatFile, str(value['number'])])
-        self.printPatternOnCanvas(result.pattern)
+        sel = w.curselection()
+        if len(sel) > 0:
+            index = int(w.curselection()[0])
+            pattern = self.patterns[index]
+        else:
+            pattern = None
+        self.displayPattern(pattern)
         
+    def displayPattern(self, pattern=None):
+        if not pattern:
+            pattern = self.pattern
+        self.patternCanvas.clear()
+        self.patternTitle.caption.set(self.getPatternTitle(pattern))
+        if pattern:
+            result = self.patternDumper.dumppattern([self.currentDatFile, str(pattern['number'])])
+            self.printPatternOnCanvas(result.pattern)
+        self.pattern = pattern
+        
+    def getPatternTitle(self, pattern):
+        p = pattern
+        if p:
+            return 'Pattern no: ' + str(p['number']) + " (rows x stitches: " + str(p["rows"]) + " x " + str(p["stitches"]) + ")" 
+        else:
+            return 'No pattern'
+    
     def printPatternOnCanvas(self, pattern):
         patternWidth = len(pattern)
         patternHeight = len(pattern[0])
@@ -124,6 +160,12 @@ class KnittingApp(Tkinter.Tk):
             for stitch in range(len(pattern[row])):
                 if(pattern[row][stitch]) == 0:
                     self.patternCanvas.create_rectangle(stitch * bitWidth,row * bitHeight,(stitch+1) * bitWidth,(row+1) * bitHeight, width=0, fill='black')
+                    
+    def canvasConfigured(self):
+        self.msg.displayMessages = False
+        self.displayPattern()
+        self.msg.displayMessages = True
+        self.after(100, self.canvasConfigured)
 
 class PDDListener(PDDEmulatorListener):
 

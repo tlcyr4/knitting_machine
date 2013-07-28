@@ -5,6 +5,7 @@ class Gui:
         self.initMainWindow(w)
 
         self._maxColumns = 1000
+        self._maxRows = 1000
         self._row = 0
         self.createDeviceWidgets()
         self.createEmulatorButton()
@@ -21,7 +22,7 @@ class Gui:
     def initMainWindow(self, mainWindow):
         self.mainWindow = mainWindow
         self.mainWindow.title('Knitting pattern uploader')
-        self.mainWindow.geometry("800x400")
+        self.mainWindow.geometry("600x400")
         self.mainWindow.grid()
         self.mainWindow.grid_columnconfigure(1,weight=1)
         self.mainWindow.resizable(True,True)
@@ -63,21 +64,33 @@ class Gui:
         
     def createPatternsPanel(self):
         patternFrame = Tkinter.Frame(self.mainWindow)
-        patternFrame.grid(column=0, row=self._row, columnspan = self._maxColumns,sticky='EW')
+        patternFrame.grid(column=0, row=self._row, columnspan = self._maxColumns,sticky='EWNS')
+        self.mainWindow.grid_rowconfigure(self._row,weight=1)
         patternFrame.grid_columnconfigure(0,weight=1)
         patternFrame.grid_columnconfigure(1,weight=1)
+        patternFrame.grid_rowconfigure(1,weight=1)
         
+        listboxFrame = Tkinter.Frame(patternFrame)
+        listboxFrame.grid(column=0, row=0, sticky='EWNS', rowspan=self._maxRows)
+        scrollbar = Tkinter.Scrollbar(listboxFrame, orient=Tkinter.VERTICAL)
         listvar = Tkinter.StringVar()
-        lb = Tkinter.Listbox(patternFrame, listvariable=listvar, exportselection=0, width=50)
+        lb = Tkinter.Listbox(listboxFrame, listvariable=listvar, exportselection=0, width=50, yscrollcommand=scrollbar.set)
+        scrollbar.config(command=lb.yview)
         lb.items = ListboxVar(lb, listvar)
-        lb.grid(column=0, row=0, sticky='EW')
-        lb.bind('<<ListboxSelect>>', self.mainWindow.patternSelected)
+        scrollbar.pack(side=Tkinter.RIGHT, fill=Tkinter.Y)
+        lb.pack(side=Tkinter.LEFT, fill=Tkinter.BOTH, expand=1)
         self.mainWindow.patternListBox = lb;
+
+        textvar = Tkinter.StringVar()
+        label = Tkinter.Label(patternFrame, anchor="w", textvariable = textvar)
+        label.grid(column=1, row=0, sticky='EW')
+        label.caption = textvar
+        self.mainWindow.patternTitle = label
         
         pc = ExtendedCanvas(patternFrame, bg='white')
-        pc.grid(column=1, row=0, sticky='EW')
+        pc.grid(column=1, row=1, sticky='EWNS')
         self.mainWindow.patternCanvas = pc
-    
+        
     def setEmuButtonStopped(self):
         b = self.emuButton
         b.caption.set(u"Start emulator...")
@@ -87,14 +100,18 @@ class Gui:
         b.caption.set(u"Stop emulator...")
         
 class ExtendedCanvas(Tkinter.Canvas):
+
     def getWidth(self):
-        return int(self.cget('width'))
+        w = self.winfo_width()
+        return w
         
     def getHeight(self):
-        return int(self.cget('height'))
+        h = self.winfo_height()
+        return h
         
     def clear(self):
-        self.create_rectangle(0,0,self.getWidth(),self.getHeight(), width=0, fill=self.cget('bg'))
+        maxsize = 10000
+        self.create_rectangle(0,0,maxsize, maxsize, width=0, fill=self.cget('bg'))
         
 class ListboxVar:
     def __init__(self, listbox, stringvar):
