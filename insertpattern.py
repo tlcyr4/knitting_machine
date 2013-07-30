@@ -24,6 +24,8 @@ import array
 
 TheImage = None
 
+version = '1.0'
+
 ##################
 
 def roundeven(val):
@@ -57,149 +59,183 @@ def bytesForMemo(rows):
 
 ##############
 
+class PatternInserter:
+    def __init__(self):
+        self.printInfoCallback = self.printInfo
+        self.printErrorCallback = self.printError
+        self.printPatternCallback = self.printPattern
+        
+    def printInfo(self, printMsg):
+        print printMsg
 
-version = '1.0'
+    def printError(self, printMsg):
+        print printMsg
 
-if len(sys.argv) < 5:
-    print 'Usage: %s oldbrotherfile pattern# image.bmp newbrotherfile' % sys.argv[0]
-    sys.exit()
+    def printPattern(self, printMsg):
+        sys.stdout.write(printMsg)
 
+    def insertPattern(self, oldbrotherfile, pattnum, imgfile, newbrotherfile):
 
-bf = brother.brotherFile(sys.argv[1])
-pattnum = sys.argv[2]
-imgfile = sys.argv[3]
+        bf = brother.brotherFile(oldbrotherfile)
 
+        pats = bf.getPatterns()
 
-pats = bf.getPatterns()
+        # ok got a bank, now lets figure out how big this thing we want to insert is
+        TheImage = Image.open(imgfile)
+        TheImage.load()
 
-# ok got a bank, now lets figure out how big this thing we want to insert is
-TheImage = Image.open(imgfile)
-TheImage.load()
-
-im_size = TheImage.size
-width = im_size[0]
-print "width:",width
-height = im_size[1]
-print "height:", height
+        im_size = TheImage.size
+        width = im_size[0]
+        self.printInfoCallback( "width:" + str(width))
+        height = im_size[1]
+        self.printInfoCallback( "height:" +  str(height))
 
 
 
-# find the program entry
-thePattern = None
+        # find the program entry
+        thePattern = None
 
-for pat in pats:
-    if (int(pat["number"]) == int(pattnum)):
-        #print "found it!"
-        thePattern = pat
-if (thePattern == None):
-    print "Pattern #",pattnum,"not found!"
-    exit(0)
+        for pat in pats:
+            if (int(pat["number"]) == int(pattnum)):
+                #print "found it!"
+                thePattern = pat
+        if (thePattern == None):
+            raise PatternNotFoundException(pattnum)
 
-if (height != thePattern["rows"] or width != thePattern["stitches"]):
-    print "Pattern is the wrong size, the BMP is ",height,"x",width,"and the pattern is ",thePattern["rows"], "x", thePattern["stitches"]
-    exit(0)
+        if (height != thePattern["rows"] or width != thePattern["stitches"]):
+            raise InserterException("Pattern is the wrong size, the BMP is ",height,"x",width,"and the pattern is ",thePattern["rows"], "x", thePattern["stitches"])
 
-# debugging stuff here
-x = 0
-y = 0
+        # debugging stuff here
+        x = 0
+        y = 0
 
-x = width - 1
-while x > 0:
-    value = TheImage.getpixel((x,y))
-    if value:
-        sys.stdout.write('* ')
-    else:
-        sys.stdout.write('  ')
-    #sys.stdout.write(str(value))
-    x = x-1
-    if x == 0: #did we hit the end of the line?
-        y = y+1
         x = width - 1
-        print " "
-        if y == height:
-            break
-# debugging stuff done
+        while x > 0:
+            value = TheImage.getpixel((x,y))
+            if value:
+                self.printPattern('* ')
+            else:
+                self.printPattern('  ')
+            #sys.stdout.write(str(value))
+            x = x-1
+            if x == 0: #did we hit the end of the line?
+                y = y+1
+                x = width - 1
+                print " "
+                if y == height:
+                    break
+        # debugging stuff done
 
-# now to make the actual, yknow memo+pattern data
+        # now to make the actual, yknow memo+pattern data
 
-# the memo seems to be always blank. i have no idea really
-memoentry = []
-for i in range(bytesForMemo(height)):
-    memoentry.append(0x0)
+        # the memo seems to be always blank. i have no idea really
+        memoentry = []
+        for i in range(bytesForMemo(height)):
+            memoentry.append(0x0)
 
-# now for actual real live pattern data!
-pattmemnibs = []
-for r in range(height):
-    row = []  # we'll chunk in bits and then put em into nibbles
-    for s in range(width):
-        value = TheImage.getpixel((width-s-1,height-r-1))
-        if (value != 0):
-            row.append(1)
-        else:
-            row.append(0)
-    #print row
-    # turn it into nibz
-    for s in range(roundfour(width) / 4):
-        n = 0
-        for nibs in range(4):
-            #print "row size = ", len(row), "index = ",s*4+nibs
+        # now for actual real live pattern data!
+        pattmemnibs = []
+        for r in range(height):
+            row = []  # we'll chunk in bits and then put em into nibbles
+            for s in range(width):
+                value = TheImage.getpixel((width-s-1,height-r-1))
+                if (value != 0):
+                    row.append(1)
+                else:
+                    row.append(0)
+            #print row
+            # turn it into nibz
+            for s in range(roundfour(width) / 4):
+                n = 0
+                for nibs in range(4):
+                    #print "row size = ", len(row), "index = ",s*4+nibs
 
-            if (len(row) == (s*4+nibs)):
-                break       # padding!
+                    if (len(row) == (s*4+nibs)):
+                        break       # padding!
+                    
+                    if (row[s*4 + nibs]):
+                        n |= 1 << nibs
+                pattmemnibs.append(n)
+                #print hex(n),
+
+
+        if (len(pattmemnibs) % 2):
+            # odd nibbles, buffer to a byte
+            pattmemnibs.append(0x0)
+
+        #print len(pattmemnibs), "nibbles of data"
+
+        # turn into bytes
+        pattmem = []
+        for i in range (len(pattmemnibs) / 2):
+            pattmem.append( pattmemnibs[i*2] | (pattmemnibs[i*2 + 1] << 4))
+
+        #print map(hex, pattmem)
+        # whew. 
+
+
+        # now to insert this data into the file 
+
+        # now we have to figure out the -end- of the last pattern is
+        endaddr = 0x6df
+
+        beginaddr = thePattern["pattend"]
+        endaddr = beginaddr + bytesForMemo(height) + len(pattmem)
+        self.printInfoCallback("beginning will be at " + str(hex(beginaddr)) +  ", end at " + str(hex(endaddr)))
+
+        # Note - It's note certain that in all cases this collision test is needed. What's happening
+        # when you write below this address (as the pattern grows downward in memory) in that you begin
+        # to overwrite the pattern index data that starts at low memory. Since you overwrite the info
+        # for highest memory numbers first, you may be able to get away with it as long as you don't
+        # attempt to use higher memories.
+        # Steve
+
+        if beginaddr <= 0x2B8:
+            self.printErrorCallback("Sorry, this will collide with the pattern entry data since %s is <= 0x2B8!" % hex(beginaddr))
+            #exit
+
+        # write the memo and pattern entry from the -end- to the -beginning- (up!)
+        for i in range(len(memoentry)):
+            bf.setIndexedByte(endaddr, 0)
+            endaddr -= 1
+
+        for i in range(len(pattmem)):
+            bf.setIndexedByte(endaddr, pattmem[i])
+            endaddr -= 1
+
+        # push the data to a file
+        outfile = open(newbrotherfile, 'wb')
+
+        d = bf.getFullData()
+        outfile.write(d)
+        outfile.close()
+
+class InserterException(Exception):
+    def getMessage(self):
+        msg = ''
+        for arg in self.args:
+            if msg != '':
+                msg += ' '
+            msg += str(arg)
             
-            if (row[s*4 + nibs]):
-                n |= 1 << nibs
-        pattmemnibs.append(n)
-        #print hex(n),
+        return msg
 
+class PatternNotFoundException(InserterException):
+    def __init__(self, patternNumber):
+        self.patternNumber = patternNumber
+        
 
-if (len(pattmemnibs) % 2):
-    # odd nibbles, buffer to a byte
-    pattmemnibs.append(0x0)
-
-#print len(pattmemnibs), "nibbles of data"
-
-# turn into bytes
-pattmem = []
-for i in range (len(pattmemnibs) / 2):
-    pattmem.append( pattmemnibs[i*2] | (pattmemnibs[i*2 + 1] << 4))
-
-#print map(hex, pattmem)
-# whew. 
-
-
-# now to insert this data into the file 
-
-# now we have to figure out the -end- of the last pattern is
-endaddr = 0x6df
-
-beginaddr = thePattern["pattend"]
-endaddr = beginaddr + bytesForMemo(height) + len(pattmem)
-print "beginning will be at ", hex(beginaddr), "end at", hex(endaddr)
-
-# Note - It's note certain that in all cases this collision test is needed. What's happening
-# when you write below this address (as the pattern grows downward in memory) in that you begin
-# to overwrite the pattern index data that starts at low memory. Since you overwrite the info
-# for highest memory numbers first, you may be able to get away with it as long as you don't
-# attempt to use higher memories.
-# Steve
-
-if beginaddr <= 0x2B8:
-    print "sorry, this will collide with the pattern entry data since %s is <= 0x2B8!" % hex(beginaddr)
-    #exit
-
-# write the memo and pattern entry from the -end- to the -beginning- (up!)
-for i in range(len(memoentry)):
-    bf.setIndexedByte(endaddr, 0)
-    endaddr -= 1
-
-for i in range(len(pattmem)):
-    bf.setIndexedByte(endaddr, pattmem[i])
-    endaddr -= 1
-
-# push the data to a file
-outfile = open(sys.argv[4], 'wb')
-
-d = bf.getFullData()
-outfile.write(d)
-outfile.close()
+if __name__ == "__main__":
+    if len(sys.argv) < 5:
+        print 'Usage: %s oldbrotherfile pattern# image.bmp newbrotherfile' % sys.argv[0]
+        sys.exit()
+    inserter = PatternInserter()
+    argv = sys.argv
+    try:
+        inserter.insertPattern(argv[1],argv[2],argv[3],argv[4])
+    except PatternNotFoundException as e:
+        print 'ERROR: Pattern %d not found' % e.patternNumber
+        sys.exit(1)
+    except InserterException as e:
+        print 'ERROR: ',e.getMessage()
+        sys.exit(1)

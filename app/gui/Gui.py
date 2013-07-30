@@ -24,7 +24,8 @@ class Gui:
         self.mainWindow.title('Knitting pattern uploader')
         self.mainWindow.geometry("600x400")
         self.mainWindow.grid()
-        self.mainWindow.grid_columnconfigure(1,weight=1)
+        self.mainWindow.grid_columnconfigure(1,weight=10)
+        self.mainWindow.grid_columnconfigure(2,weight=1)
         self.mainWindow.resizable(True,True)
         
     def createDeviceWidgets(self):
@@ -40,8 +41,11 @@ class Gui:
         caption = Tkinter.StringVar()
         self.emuButton = Tkinter.Button(self.mainWindow, textvariable = caption, command = self.mainWindow.emuButtonClicked)
         self.emuButton.caption = caption
-        self.emuButton.grid(column=2,row=self._row)
+        self.emuButton.grid(column=2,row=self._row, columnspan=2, sticky='EW')
         self.setEmuButtonStopped()
+        
+        but = Tkinter.Button(self.mainWindow, text = u'Help...', command = self.mainWindow.helpButtonClicked)
+        but.grid(column=4,row=self._row, sticky='E')
         
     def createDatFileWidgets(self):
         label = Tkinter.Label(self.mainWindow, text=u"Dat file:")
@@ -52,8 +56,11 @@ class Gui:
         self.mainWindow.datFileEntry.grid(column=1,row=self._row,sticky='EW')
         self.mainWindow.datFileEntry.entryText = entryText
 
+        self.chooseDatFileButton = Tkinter.Button(self.mainWindow, text=u"...", command = self.mainWindow.chooseDatFileButtonClicked)
+        self.chooseDatFileButton.grid(column=2,row=self._row,sticky='W')
+
         self.reloadDatFileButton = Tkinter.Button(self.mainWindow, text=u"Reload file", command = self.mainWindow.reloadDatFileButtonClicked)
-        self.reloadDatFileButton.grid(column=2,row=self._row,sticky='EW')
+        self.reloadDatFileButton.grid(column=3,row=self._row,sticky='EW')
         
     def createInfoMessagesLabel(self):
         labelText = Tkinter.StringVar()
@@ -87,8 +94,11 @@ class Gui:
         label.caption = textvar
         self.mainWindow.patternTitle = label
         
+        self.insertBitmapButton = Tkinter.Button(patternFrame, text=u"Insert bitmap...", command = self.mainWindow.insertBitmapButtonClicked)
+        self.insertBitmapButton.grid(column=2,row=0,sticky='EW')
+
         pc = ExtendedCanvas(patternFrame, bg='white')
-        pc.grid(column=1, row=1, sticky='EWNS')
+        pc.grid(column=1, row=1, sticky='EWNS', columnspan=2)
         self.mainWindow.patternCanvas = pc
         
     def setEmuButtonStopped(self):
@@ -97,7 +107,7 @@ class Gui:
         
     def setEmuButtonStarted(self):
         b = self.emuButton
-        b.caption.set(u"Stop emulator...")
+        b.caption.set(u"...stop emulator")
         
 class ExtendedCanvas(Tkinter.Canvas):
 

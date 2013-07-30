@@ -11,6 +11,12 @@ class Messages:
             self.clear()
             sys.stderr.write('Error: ' + str(msg) + '\n')
             mb.showerror('Error:', str(msg))
+
+    def showMoreInfo(self, msg):
+        if self.displayMessages:
+            self.clear()
+            print msg
+            mb.showinfo('Info:',str(msg))
         
     def showInfo(self, msg):
         if self.displayMessages:

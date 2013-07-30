@@ -7,7 +7,9 @@ from app.gui.Gui import Gui
 from PDDemulate import PDDemulator
 from PDDemulate import PDDEmulatorListener
 from dumppattern import PatternDumper
+from insertpattern import PatternInserter
 import Tkinter
+import tkFileDialog
 
 class KnittingApp(Tkinter.Tk):
 
@@ -23,16 +25,23 @@ class KnittingApp(Tkinter.Tk):
         self.pattern = None
         self._cfg = None
         self.currentDatFile = None
-        self.patternDumper = PatternDumper()
-        self.patternDumper.printInfoCallback = self.msg.showInfo
+        self.initializeUtilities()
         self.gui = Gui()
         self.gui.initializeMainWindow(self)
+        self.updatePatternCanvasLastSize()
         self.patternListBox.bind('<<ListboxSelect>>', self.patternSelected)
         self.after_idle(self.canvasConfigured)
         self.deviceEntry.entryText.set(self.getConfig().device)
         self.datFileEntry.entryText.set(self.getConfig().datFile)
         self.initEmulator()
         self.after_idle(self.reloadPatternFile)
+        
+    def initializeUtilities(self):
+        self.patternDumper = PatternDumper()
+        self.patternDumper.printInfoCallback = self.msg.showInfo
+        self.patternInserter = PatternInserter()
+        self.patternInserter.printInfoCallback = self.msg.showInfo
+        self.patternInserter.printErrorCallback = self.msg.showError
         
     def initEmulator(self):
         self.emu = PDDemulator(self.getConfig().imgdir)
@@ -101,6 +110,9 @@ class KnittingApp(Tkinter.Tk):
     def reloadPatternFile(self, pathToFile = None):
         if not pathToFile:
             pathToFile = self.datFileEntry.entryText.get()
+        else:
+            self.datFileEntry.entryText.set(pathToFile)
+
         if not pathToFile:
             return
         self.currentDatFile = pathToFile
@@ -120,14 +132,29 @@ class KnittingApp(Tkinter.Tk):
         except IOError as e:
             self.msg.showError('Could not open pattern file %s' % pathToFile + '\n' + str(e))
         
+    def helpButtonClicked(self):
+        helpMsg = '''Commands to execute on Knitting machine:
+
+552: Download patterns from machine to computer
+551: Upload patterns from computer to machine
+'''
+        self.msg.showMoreInfo(helpMsg)
+
     def reloadDatFileButtonClicked(self):
         self.reloadPatternFile()
+
+    def chooseDatFileButtonClicked(self):
+        filePath = tkFileDialog.askopenfilename(filetypes=[('DAT file', '*.dat')], initialfile=self.datFileEntry.entryText.get(),
+            title='Choose dat file with patterns...')
+        if len(filePath) > 0:
+            self.msg.showInfo('Opened dat file ' + filePath)
+            self.reloadPatternFile(filePath)
         
     def patternSelected(self, evt):
         w = evt.widget
         sel = w.curselection()
         if len(sel) > 0:
-            index = int(w.curselection()[0])
+            index = int(sel[0])
             pattern = self.patterns[index]
         else:
             pattern = None
@@ -161,11 +188,34 @@ class KnittingApp(Tkinter.Tk):
                 if(pattern[row][stitch]) == 0:
                     self.patternCanvas.create_rectangle(stitch * bitWidth,row * bitHeight,(stitch+1) * bitWidth,(row+1) * bitHeight, width=0, fill='black')
                     
+    def updatePatternCanvasLastSize(self):
+        self.patternCanvas.lastWidth = self.patternCanvas.getWidth()
+        self.patternCanvas.lastHeight = self.patternCanvas.getHeight()
+                    
     def canvasConfigured(self):
-        self.msg.displayMessages = False
-        self.displayPattern()
-        self.msg.displayMessages = True
+        if self.patternCanvas.lastWidth != self.patternCanvas.getWidth() or self.patternCanvas.lastHeight != self.patternCanvas.getHeight():
+            self.msg.displayMessages = False
+            self.updatePatternCanvasLastSize()
+            self.displayPattern()
+            self.msg.displayMessages = True
         self.after(100, self.canvasConfigured)
+    
+    def insertBitmapButtonClicked(self):
+        sel = self.patternListBox.curselection()
+        if len(sel) == 0:
+            self.msg.showError('Target pattern for insertion must be selected!')
+            return
+        index = int(sel[0])
+        pattern = self.patterns[index]
+        filePath = tkFileDialog.askopenfilename(filetypes=[('2-color Bitmap', '*.bmp')],
+            title='Choose bitmap file to insert...')
+        if len(filePath) > 0:
+            self.insertBitmap(filePath, pattern["number"])
+            
+    def insertBitmap(self, bitmapFile, patternNumber):
+        self.msg.showInfo('Inserting dat file %s to pattern number %d' % (bitmapFile, patternNumber))
+        oldBrotherFile = self.currentDatFile
+        self.patternInserter.insertPattern(oldBrotherFile, patternNumber, bitmapFile, 'myfile.dat')
 
 class PDDListener(PDDEmulatorListener):
 
@@ -173,7 +223,6 @@ class PDDListener(PDDEmulatorListener):
         self.app = app
 
     def dataReceived(self, fullFilePath):
-        self.app.datFileEntry.entryText.set(fullFilePath)
         self.reloadPatternFile(fullFilePath)
     
     
