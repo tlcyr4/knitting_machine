@@ -62,6 +62,10 @@ class Gui:
         self.reloadDatFileButton = Tkinter.Button(self.mainWindow, text=u"Reload file", command = self.mainWindow.reloadDatFileButtonClicked)
         self.reloadDatFileButton.grid(column=3,row=self._row,sticky='EW')
         
+        but = Tkinter.Button(self.mainWindow, text=u"Store track", command = self.mainWindow.storeTrackButtonClicked)
+        but.grid(column=4,row=self._row,sticky='EW')
+        self.storeTrackButton = but
+        
     def createInfoMessagesLabel(self):
         labelText = Tkinter.StringVar()
         label = Tkinter.Label(self.mainWindow, anchor="w",fg="white",bg="blue",textvariable=labelText)

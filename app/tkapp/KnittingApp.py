@@ -10,6 +10,8 @@ from dumppattern import PatternDumper
 from insertpattern import PatternInserter
 import Tkinter
 import tkFileDialog
+import os
+import os.path
 
 class KnittingApp(Tkinter.Tk):
 
@@ -23,9 +25,11 @@ class KnittingApp(Tkinter.Tk):
         self.msg = Messages(self)
         self.patterns = []
         self.pattern = None
-        self._cfg = None
         self.currentDatFile = None
+
+        self.initConfig()
         self.initializeUtilities()
+
         self.gui = Gui()
         self.gui.initializeMainWindow(self)
         self.updatePatternCanvasLastSize()
@@ -33,6 +37,7 @@ class KnittingApp(Tkinter.Tk):
         self.after_idle(self.canvasConfigured)
         self.deviceEntry.entryText.set(self.getConfig().device)
         self.datFileEntry.entryText.set(self.getConfig().datFile)
+
         self.initEmulator()
         self.after_idle(self.reloadPatternFile)
         
@@ -46,6 +51,7 @@ class KnittingApp(Tkinter.Tk):
     def initEmulator(self):
         self.emu = PDDemulator(self.getConfig().imgdir)
         self.emu.listeners.append(PDDListener(self))
+        #self.emu = lambda: 1
         self.setEmulatorStarted(False)
     
     def emuButtonClicked(self):
@@ -75,7 +81,8 @@ class KnittingApp(Tkinter.Tk):
     def emulatorLoop(self):
         if self.emu.started:
             self.emu.handleRequest()
-            self.after_idle(self.emulatorLoop)
+            # repeated call to after_idle() caused all window dialogs to hang out application, using after() each 10 milliseconds
+            self.after(10,self.emulatorLoop)
         
     def stopEmulator(self):
         if self.emu is not None:
@@ -96,16 +103,17 @@ class KnittingApp(Tkinter.Tk):
             self.gui.setEmuButtonStopped()
     
     def getConfig(self):
-        cfg = self._cfg
-        if cfg is None:
-            self._cfg = cfg = Config()
-            if not hasattr(cfg, "device"):
-                cfg.device = u""
-            if not hasattr(cfg, "datFile"):
-                cfg.datFile = u""
-            if not hasattr(cfg, "simulateEmulator"):
-                cfg.simulateEmulator = False
-        return cfg
+        return self.config
+    
+    def initConfig(self):
+        cfg = Config()
+        if not hasattr(cfg, "device"):
+            cfg.device = u""
+        if not hasattr(cfg, "datFile"):
+            cfg.datFile = u""
+        if not hasattr(cfg, "simulateEmulator"):
+            cfg.simulateEmulator = False
+        self.config = cfg
         
     def reloadPatternFile(self, pathToFile = None):
         if not pathToFile:
@@ -122,26 +130,69 @@ class KnittingApp(Tkinter.Tk):
             listBoxModel = []
             for p in self.patterns:
                 listBoxModel.append(self.getPatternTitle(p))
+            selectedIndex = self.getSelectedPatternIndex()
             self.patternListBox.items.set(listBoxModel)
-            if (len(listBoxModel) > 0):
-                selected_index = 0
-                self.patternListBox.selection_set(selected_index)
-                self.displayPattern(self.patterns[selected_index])
-            else:
-                self.displayPattern(None)
+            self.setSelectedPatternIndex(selectedIndex)
         except IOError as e:
             self.msg.showError('Could not open pattern file %s' % pathToFile + '\n' + str(e))
+            
+    def storeTrack(self, pathToFile = None):
+        if not pathToFile:
+            pathToFile = self.datFileEntry.entryText.get()
+        self.msg.showInfo('Storing tracks for file ' + pathToFile)
+        trackFile1, trackFile2 = "00.dat", "01.dat"
+        trackPath1 = os.path.join(self.config.imgdir, trackFile1)
+        trackPath2 = os.path.join(self.config.imgdir, trackFile2)
+        trackSize = 1024
+        
+        startEmu = self.emu.started
+        if startEmu:
+            self.stopEmulator()
+
+        infile = track0file = track1file = None
+        
+        infile = open(pathToFile, 'rb')
+        
+        try:
+            track0file = open(trackPath1, 'wb')
+            track1file = open(trackPath2, 'wb')
+            
+            t0dat = infile.read(trackSize)
+            t1dat = infile.read(trackSize)
+
+            track0file.write(t0dat)
+            track1file.write(t1dat)
+            self.msg.showInfo('Stored file to tracks ' + trackFile1 + ' and ' + trackFile2 + ' in config.imgdir')
+        except Exception as e:
+            self.msg.showError(str(e))
+        finally:
+            if infile:
+                self.msg.showDebug("Closing infile...")
+                infile.close
+            if track0file:
+                self.msg.showDebug("Closing track0file...")
+                track0file.close()
+            if track1file:
+                self.msg.showDebug("Closing track1file...")
+                track1file.close()
+            if startEmu:
+                self.startEmulator()
         
     def helpButtonClicked(self):
         helpMsg = '''Commands to execute on Knitting machine:
 
 552: Download patterns from machine to computer
 551: Upload patterns from computer to machine
+     - before this, make sure that you stored file to track
+     - afterfards pressing 551, press 1 to load track with inserted patterns
 '''
         self.msg.showMoreInfo(helpMsg)
 
     def reloadDatFileButtonClicked(self):
         self.reloadPatternFile()
+        
+    def storeTrackButtonClicked(self):
+        self.storeTrack()
 
     def chooseDatFileButtonClicked(self):
         filePath = tkFileDialog.askopenfilename(filetypes=[('DAT file', '*.dat')], initialfile=self.datFileEntry.entryText.get(),
@@ -152,13 +203,31 @@ class KnittingApp(Tkinter.Tk):
         
     def patternSelected(self, evt):
         w = evt.widget
-        sel = w.curselection()
-        if len(sel) > 0:
-            index = int(sel[0])
+        index = self.getSelectedPatternIndex()
+        if index is not None:
             pattern = self.patterns[index]
         else:
             pattern = None
         self.displayPattern(pattern)
+        
+    def getSelectedPatternIndex(self):
+        sel = self.patternListBox.curselection()
+        if len(sel) > 0:
+            return int(sel[0])
+        else:
+            return None
+            
+    def setSelectedPatternIndex(self, index):
+        lb = self.patternListBox
+        if index is None:
+            index = 0
+        if lb.size() == 0:
+            self.displayPattern(None)
+            return
+        if index > lb.size():
+            index = 0
+        self.patternListBox.selection_set(index)
+        self.displayPattern(self.patterns[index])
         
     def displayPattern(self, pattern=None):
         if not pattern:
@@ -215,7 +284,8 @@ class KnittingApp(Tkinter.Tk):
     def insertBitmap(self, bitmapFile, patternNumber):
         self.msg.showInfo('Inserting dat file %s to pattern number %d' % (bitmapFile, patternNumber))
         oldBrotherFile = self.currentDatFile
-        self.patternInserter.insertPattern(oldBrotherFile, patternNumber, bitmapFile, 'myfile.dat')
+        self.patternInserter.insertPattern(oldBrotherFile, patternNumber, bitmapFile, oldBrotherFile)
+        self.reloadPatternFile()
 
 class PDDListener(PDDEmulatorListener):
 
@@ -223,7 +293,7 @@ class PDDListener(PDDEmulatorListener):
         self.app = app
 
     def dataReceived(self, fullFilePath):
-        self.reloadPatternFile(fullFilePath)
+        self.app.reloadPatternFile(fullFilePath)
     
     
 if __name__ == "__main__":
