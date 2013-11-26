@@ -247,15 +247,28 @@ class KnittingApp(Tkinter.Tk):
             return 'No pattern'
     
     def printPatternOnCanvas(self, pattern):
-        patternWidth = len(pattern)
-        patternHeight = len(pattern[0])
+#        pattern = []
+#        for x in range(8):
+#            row = []
+#            for y in range(13):
+#                row.append((y % 2 + x % 2) % 2)
+#            pattern.append(row)
+        patternHeight = len(pattern)
+        patternWidth = len(pattern[0])
         bitWidth = self.patternCanvas.getWidth() / patternWidth;
         bitHeight = self.patternCanvas.getHeight() / patternHeight;
+        bitWidth = min(bitWidth, bitHeight)
+        bitHeight = bitWidth
         self.patternCanvas.clear()
         for row in range(len(pattern)):
             for stitch in range(len(pattern[row])):
-                if(pattern[row][stitch]) == 0:
-                    self.patternCanvas.create_rectangle(stitch * bitWidth,row * bitHeight,(stitch+1) * bitWidth,(row+1) * bitHeight, width=0, fill='black')
+                if (pattern[row][stitch]) == 1:
+                    fill='black'
+                    border='white'
+                else:
+                    fill='white'
+                    border='black'
+                self.patternCanvas.create_rectangle(stitch * bitWidth,row * bitHeight,(stitch+1) * bitWidth,(row+1) * bitHeight, width=1, fill=fill, outline=border)
                     
     def updatePatternCanvasLastSize(self):
         self.patternCanvas.lastWidth = self.patternCanvas.getWidth()
