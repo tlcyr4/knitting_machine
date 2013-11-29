@@ -265,12 +265,14 @@ class KnittingApp(Tkinter.Tk):
         self._printPatternBody(pattern, marginx, marginy, bitWidth, bitHeight)
         secCoordbig, secCoordsmall, secCoord2 = 0, marginy / 2, marginy
         step, bigStep = 5, 10
-        for i in xrange(0, patternWidth+1, step):
-            xCoord = marginx + i * bitWidth
-            yCoord = marginx + i * bitHeight
+        for i in xrange(0, max(patternWidth, patternHeight)+1, step):
             secCoord = secCoordbig if i % bigStep == 0 else secCoordsmall
-            self.patternCanvas.create_line(xCoord, secCoord, xCoord, secCoord2)
-            self.patternCanvas.create_line(secCoord, yCoord, secCoord2, yCoord)
+            if i < patternWidth:
+                xCoord = marginx + i * bitWidth
+                self.patternCanvas.create_line(xCoord, secCoord, xCoord, secCoord2)
+            if i < patternHeight:
+                yCoord = marginx + i * bitHeight
+                self.patternCanvas.create_line(secCoord, yCoord, secCoord2, yCoord)
 
     def _printPatternBody(self, pattern, patternPosx, patternPosy, bitWidth, bitHeight):
         patternHeight = len(pattern)
@@ -287,6 +289,7 @@ class KnittingApp(Tkinter.Tk):
                     border='black'
                     #border=fill
                 row = patternHeight - row - 1
+                #stitch = patternWidth - stitch - 1
                 self.patternCanvas.create_rectangle(patternPosx + stitch * bitWidth, patternPosy + row * bitHeight, 
                     patternPosx + (stitch+1) * bitWidth, patternPosy + (row+1) * bitHeight, width=1, fill=fill, outline=border)
         # pattern border

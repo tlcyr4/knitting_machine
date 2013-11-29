@@ -27,10 +27,11 @@ import ctypes
 
 __version__ = '1.0'
 
-MACHINE_FORMAT = 'FirstLady'
+methodWithPointers = False
+methodWithPointers = True # uncomment this to use new, more precise method of finding patterns in the dat file, based on kh940 format documentation from https://github.com/stg/knittington/blob/master/doc/kh940_format.txt (should work with all kh930 and kh940 models)
 
 # Some file location constants
-initPatternOffset = 0x06DF + 288 if MACHINE_FORMAT == 'FirstLady' else 0x06DF # programmed patterns start here, grow down
+initPatternOffset = 0x06DF # programmed patterns start here, grow down
 currentPatternAddr = 0x07EA # stored in MSN and following byte
 currentRowAddr = 0x06FF
 nextRowAddr = 0x072F
@@ -93,8 +94,6 @@ def bytesPerPatternAndMemo(stitches, rows):
 
 class brotherFile(object):
 
-    machineFormat = MACHINE_FORMAT
-
     def __init__(self, fn):
         self.dfn = None
         self.verbose = False
@@ -109,10 +108,18 @@ class brotherFile(object):
             print 'Unable to open brother file <%s>' % fn
             raise
         try:
-            self.data = self.df.read(2048)
+            if methodWithPointers:
+                self.data = self.df.read(-1)
+            else:
+                self.data = self.df.read(2048)
             self.df.close()
+            if len(self.data) == 0:
+                raise Exception()
         except:
-            print 'Unable to read 2048 bytes from file <%s>' % fn
+            if methodWithPointers:
+                print 'Unable to read 2048 bytes from file <%s>' % fn
+            else:
+                print 'Unable to read data from file <%s>' % fn
             raise
         self.dfn = fn
         return
@@ -215,11 +222,10 @@ class brotherFile(object):
             # we have this entry
             if self.verbose:
                 print '   Pattern %3d: %3d Rows, %3d Stitches - ' % (patno, rows, stitches)
-                print 'Unk = %d, Unknown = 0x%02X (%d)' % (unk, unknown, unknown)
             if flag != 0:
                 # valid entry
-                if self.machineFormat == 'FirstLady':
-                    pptr =  + initPatternOffset - ((flag << 8) + unknown) 
+                if methodWithPointers:
+                    pptr =  len(self.data) -1 - ((flag << 8) + unknown) 
                 memoff = pptr
                 if self.verbose:
                     print "Memo #",patno, "offset ", memoff
