@@ -110,20 +110,15 @@ class PatternInserter:
         y = 0
 
         x = width - 1
-        while x > 0:
-            value = TheImage.getpixel((x,y))
-            if value:
-                self.printPattern('* ')
-            else:
-                self.printPattern('  ')
-            #sys.stdout.write(str(value))
-            x = x-1
-            if x == 0: #did we hit the end of the line?
-                y = y+1
-                x = width - 1
-                print " "
-                if y == height:
-                    break
+        for y in xrange(height):
+            for x in xrange(width):
+                value = TheImage.getpixel((x,y))
+                if value:
+                    self.printPattern('* ')
+                else:
+                    self.printPattern('  ')
+            print " "
+
         # debugging stuff done
 
         # now to make the actual, yknow memo+pattern data
@@ -138,8 +133,10 @@ class PatternInserter:
         for r in range(height):
             row = []  # we'll chunk in bits and then put em into nibbles
             for s in range(width):
-                value = TheImage.getpixel((width-s-1,height-r-1))
-                if (value != 0):
+                x = s if bf.machineFormat == 'FirstLady' else width-s-1
+                value = TheImage.getpixel((x,height-r-1))
+                isBlack = (value == 0) if bf.machineFormat == 'FirstLady' else (value != 0)
+                if (isBlack):
                     row.append(1)
                 else:
                     row.append(0)

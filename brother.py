@@ -26,10 +26,11 @@ from array import *
 import ctypes
 
 __version__ = '1.0'
-machineFormat = 'kh940'
+
+MACHINE_FORMAT = 'FirstLady'
 
 # Some file location constants
-initPatternOffset = 0x06DF + 288 if machineFormat == 'kh940' else 0x06DF # programmed patterns start here, grow down
+initPatternOffset = 0x06DF + 288 if MACHINE_FORMAT == 'FirstLady' else 0x06DF # programmed patterns start here, grow down
 currentPatternAddr = 0x07EA # stored in MSN and following byte
 currentRowAddr = 0x06FF
 nextRowAddr = 0x072F
@@ -91,6 +92,8 @@ def bytesPerPatternAndMemo(stitches, rows):
     return patbytes + memobytes
 
 class brotherFile(object):
+
+    machineFormat = MACHINE_FORMAT
 
     def __init__(self, fn):
         self.dfn = None
@@ -215,7 +218,7 @@ class brotherFile(object):
                 print 'Unk = %d, Unknown = 0x%02X (%d)' % (unk, unknown, unknown)
             if flag != 0:
                 # valid entry
-                if machineFormat == 'kh940':
+                if self.machineFormat == 'FirstLady':
                     pptr =  + initPatternOffset - ((flag << 8) + unknown) 
                 memoff = pptr
                 if self.verbose:
