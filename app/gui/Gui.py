@@ -77,7 +77,7 @@ class Gui:
         patternFrame = Tkinter.Frame(self.mainWindow)
         patternFrame.grid(column=0, row=self._row, columnspan = self._maxColumns,sticky='EWNS')
         self.mainWindow.grid_rowconfigure(self._row,weight=1)
-        patternFrame.grid_columnconfigure(0,weight=1)
+        patternFrame.grid_columnconfigure(0,weight=0)
         patternFrame.grid_columnconfigure(1,weight=1)
         patternFrame.grid_rowconfigure(1,weight=1)
         
@@ -85,7 +85,7 @@ class Gui:
         listboxFrame.grid(column=0, row=0, sticky='EWNS', rowspan=self._maxRows)
         scrollbar = Tkinter.Scrollbar(listboxFrame, orient=Tkinter.VERTICAL)
         listvar = Tkinter.StringVar()
-        lb = Tkinter.Listbox(listboxFrame, listvariable=listvar, exportselection=0, width=50, yscrollcommand=scrollbar.set)
+        lb = Tkinter.Listbox(listboxFrame, listvariable=listvar, exportselection=0, width=40, yscrollcommand=scrollbar.set)
         scrollbar.config(command=lb.yview)
         lb.items = ListboxVar(lb, listvar)
         scrollbar.pack(side=Tkinter.RIGHT, fill=Tkinter.Y)
@@ -101,8 +101,11 @@ class Gui:
         self.insertBitmapButton = Tkinter.Button(patternFrame, text=u"Insert bitmap...", command = self.mainWindow.insertBitmapButtonClicked)
         self.insertBitmapButton.grid(column=2,row=0,sticky='EW')
 
+        self.exportBitmapButton = Tkinter.Button(patternFrame, text=u"Export bitmap...", command = self.mainWindow.exportBitmapButtonClicked)
+        self.exportBitmapButton.grid(column=3,row=0,sticky='EW')
+        
         pc = ExtendedCanvas(patternFrame, bg='white')
-        pc.grid(column=1, row=1, sticky='EWNS', columnspan=2)
+        pc.grid(column=1, row=1, sticky='EWNS', columnspan=3)
         self.mainWindow.patternCanvas = pc
         
     def setEmuButtonStopped(self):

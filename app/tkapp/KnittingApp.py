@@ -12,6 +12,8 @@ import Tkinter
 import tkFileDialog
 import os
 import os.path
+import Image
+import itertools
 
 class KnittingApp(Tkinter.Tk):
 
@@ -255,21 +257,44 @@ class KnittingApp(Tkinter.Tk):
 #            pattern.append(row)
         patternHeight = len(pattern)
         patternWidth = len(pattern[0])
-        bitWidth = self.patternCanvas.getWidth() / patternWidth;
-        bitHeight = self.patternCanvas.getHeight() / patternHeight;
+        marginx, marginy = 10, 10
+        bitWidth = (self.patternCanvas.getWidth() - marginx) / (patternWidth);
+        bitHeight = (self.patternCanvas.getHeight() - marginy)/ (patternHeight);
         bitWidth = min(bitWidth, bitHeight)
         bitHeight = bitWidth
+        self._printPatternBody(pattern, marginx, marginy, bitWidth, bitHeight)
+        secCoordbig, secCoordsmall, secCoord2 = 0, marginy / 2, marginy
+        step, bigStep = 5, 10
+        for i in xrange(0, patternWidth+1, step):
+            xCoord = marginx + i * bitWidth
+            yCoord = marginx + i * bitHeight
+            secCoord = secCoordbig if i % bigStep == 0 else secCoordsmall
+            self.patternCanvas.create_line(xCoord, secCoord, xCoord, secCoord2)
+            self.patternCanvas.create_line(secCoord, yCoord, secCoord2, yCoord)
+
+    def _printPatternBody(self, pattern, patternPosx, patternPosy, bitWidth, bitHeight):
+        patternHeight = len(pattern)
+        patternWidth = len(pattern[0])
         self.patternCanvas.clear()
-        for row in range(len(pattern)):
-            for stitch in range(len(pattern[row])):
+        for row in xrange(patternHeight):
+            for stitch in xrange(patternWidth):
                 if (pattern[row][stitch]) == 1:
                     fill='black'
                     border='white'
+                    #border=fill
                 else:
                     fill='white'
                     border='black'
-                self.patternCanvas.create_rectangle(stitch * bitWidth,row * bitHeight,(stitch+1) * bitWidth,(row+1) * bitHeight, width=1, fill=fill, outline=border)
-                    
+                    #border=fill
+                row = patternHeight - row - 1
+                self.patternCanvas.create_rectangle(patternPosx + stitch * bitWidth, patternPosy + row * bitHeight, 
+                    patternPosx + (stitch+1) * bitWidth, patternPosy + (row+1) * bitHeight, width=1, fill=fill, outline=border)
+        # pattern border
+        self.patternCanvas.create_rectangle(patternPosx, patternPosy, 
+                    patternPosx + (patternWidth) * bitWidth, patternPosy + (patternHeight) * bitHeight, width=1, outline='black')
+        
+
+        
     def updatePatternCanvasLastSize(self):
         self.patternCanvas.lastWidth = self.patternCanvas.getWidth()
         self.patternCanvas.lastHeight = self.patternCanvas.getHeight()
@@ -293,6 +318,32 @@ class KnittingApp(Tkinter.Tk):
             title='Choose bitmap file to insert...')
         if len(filePath) > 0:
             self.insertBitmap(filePath, pattern["number"])
+
+    def exportBitmapButtonClicked(self):
+        sel = self.patternListBox.curselection()
+        if len(sel) == 0:
+            self.msg.showError('Target pattern for saving must be selected!')
+            return
+        index = int(sel[0])
+        pattern = self.patterns[index]
+        filePath = tkFileDialog.asksaveasfilename(filetypes=[('2-color Bitmap', '*.bmp')],
+            title='Save as a bitmap file...')
+        if len(filePath) > 0:
+            patternNumber = pattern['number']
+            self.msg.showInfo('Saving pattern number %d as bmp file %s' % (patternNumber, filePath))
+            result = self.patternDumper.dumppattern([self.currentDatFile, str(patternNumber)])
+            pattern = result.pattern
+            patternHeight = len(pattern)
+            patternWidth = len(pattern[0])
+            img = Image.new('RGB', (patternWidth, patternHeight), None)
+            for x in xrange(patternWidth):
+                for y in xrange(patternHeight):
+                    color = (0,0,0) if pattern[patternHeight - y - 1][x] == 1 else (255,255,255)
+                    img.putpixel((x,y), color)
+            img = img.convert('1')
+            img.save(filePath, 'BMP')
+            self.msg.showInfo('Saved pattern number %d as bmp file %s' % (patternNumber, filePath))
+            
             
     def insertBitmap(self, bitmapFile, patternNumber):
         self.msg.showInfo('Inserting dat file %s to pattern number %d' % (bitmapFile, patternNumber))

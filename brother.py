@@ -23,11 +23,13 @@ import array
 #import os.path
 #import string
 from array import *
+import ctypes
 
 __version__ = '1.0'
+machineFormat = 'kh940'
 
 # Some file location constants
-initPatternOffset = 0x06DF # programmed patterns start here, grow down
+initPatternOffset = 0x06DF + 288 if machineFormat == 'kh940' else 0x06DF # programmed patterns start here, grow down
 currentPatternAddr = 0x07EA # stored in MSN and following byte
 currentRowAddr = 0x06FF
 nextRowAddr = 0x072F
@@ -168,7 +170,6 @@ class brotherFile(object):
             if stitches:
                 row.append((nib & 0x08) >> 3)
                 stitches = stitches - 1
-
         return row
 
     def getPatterns(self, patternNumber = None):
@@ -214,22 +215,26 @@ class brotherFile(object):
                 print 'Unk = %d, Unknown = 0x%02X (%d)' % (unk, unknown, unknown)
             if flag != 0:
                 # valid entry
+                if machineFormat == 'kh940':
+                    pptr =  + initPatternOffset - ((flag << 8) + unknown) 
                 memoff = pptr
                 if self.verbose:
-                    print "Memo #",patno, "offset ", hex(memoff)
-                patoff = pptr -  bytesForMemo(rows)
+                    print "Memo #",patno, "offset ", memoff
+                bytes = bytesForMemo(rows)
+                patoff = pptr - bytes
                 if self.verbose:
-                     print "Pattern #",patno, "offset ", hex(patoff)
+                     print "Pattern #",patno, "offset ", patoff
                 pptr = pptr - bytesPerPatternAndMemo(stitches, rows)
+                if patno in (905,908):
+                    pptr += 0
                 if self.verbose:
                      print "Ending offset ", hex(pptr)
-                # TODO figure out how to calculate pattern length
-                #pptr = pptr - something
                 if patternNumber:
                     if patternNumber == patno:
                         patlist.append({'number':patno, 'stitches':stitches, 'rows':rows, 'memo':memoff, 'pattern':patoff, 'pattend':pptr})
                 else:
                     patlist.append({'number':patno, 'stitches':stitches, 'rows':rows, 'memo':memoff, 'pattern':patoff, 'pattend':pptr})
+                    print "Append pattern:",'number',patno, 'stitches',stitches, 'rows',rows, 'memo',memoff, 'pattern',patoff, 'bytesPattern',bytesPerPatternAndMemo(stitches, rows), 'bytesMemo',bytesForMemo(rows), 'flag', flag
             else:
                 break
         return patlist
