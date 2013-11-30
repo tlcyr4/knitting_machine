@@ -82,9 +82,9 @@ class KnittingApp(Tkinter.Tk):
         
     def emulatorLoop(self):
         if self.emu.started:
-            self.emu.handleRequest()
+            self.emu.handleRequest(False)
             # repeated call to after_idle() caused all window dialogs to hang out application, using after() each 10 milliseconds
-            self.after(10,self.emulatorLoop)
+            self.after(100,self.emulatorLoop)
         
     def stopEmulator(self):
         if self.emu is not None:
@@ -164,7 +164,7 @@ class KnittingApp(Tkinter.Tk):
 
             track0file.write(t0dat)
             track1file.write(t1dat)
-            self.msg.showInfo('Stored file to tracks ' + trackFile1 + ' and ' + trackFile2 + ' in config.imgdir')
+            self.msg.showInfo('Stored file to tracks ' + trackFile1 + ' and ' + trackFile2 + ' in ' + self.config.imgdir)
         except Exception as e:
             self.msg.showError(str(e))
         finally:

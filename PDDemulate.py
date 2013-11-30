@@ -391,9 +391,10 @@ class PDDemulator():
         # never returns
         return
 
-    def handleRequest(self):
-        if self.ser.inWaiting() == 0:
-            return
+    def handleRequest(self, blocking = True):
+        if not blocking:
+            if self.ser.inWaiting() == 0:
+                return
         inc = self.readchar()
         if self.FDCmode:
             self.handleFDCmodeRequest(inc)
@@ -618,6 +619,7 @@ class PDDemulator():
                 self.disk.writeSector(psn, lsn, indata)
                 for l in self.listeners:
                     l.dataReceived(self.disk.lastDatFilePath)
+                print 'Saved data in dat file: ', self.disk.lastDatFilePath
             except:
                 print 'Failed to write data for sector %d, quitting' % psn
                 self.writebytes('80000000')

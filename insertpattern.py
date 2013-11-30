@@ -23,7 +23,7 @@ import Image
 import array
 
 # import convenience functions from brother module
-from brother import roundeven, roundfour, roundeight, nibblesPerRow, bytesPerPattern, bytesForMemo
+from brother import roundeven, roundfour, roundeight, nibblesPerRow, bytesPerPattern, bytesForMemo, methodWithPointers
 
 TheImage = None
 
@@ -103,9 +103,9 @@ class PatternInserter:
         for r in range(height):
             row = []  # we'll chunk in bits and then put em into nibbles
             for s in range(width):
-                x = s if bf.machineFormat == 'FirstLady' else width-s-1
+                x = s if methodWithPointers else width-s-1
                 value = TheImage.getpixel((x,height-r-1))
-                isBlack = (value == 0) if bf.machineFormat == 'FirstLady' else (value != 0)
+                isBlack = (value == 0) if methodWithPointers else (value != 0)
                 if (isBlack):
                     row.append(1)
                 else:
