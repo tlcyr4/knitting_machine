@@ -648,7 +648,7 @@ if __name__ == "__main__":
 
     emu.open(cport=sys.argv[2])
 
-    print 'PDDtmulate Version 1.1 Ready!'
+    print 'Emulator Ready!'
     try:
         while 1:
             emu.handleRequests()
