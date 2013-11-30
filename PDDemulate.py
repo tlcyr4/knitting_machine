@@ -68,7 +68,7 @@ import string
 from array import *
 import serial
 
-version = '1.0'
+version = '2.0'
 
 #
 # Note that this code makes a fundamental assumption which
