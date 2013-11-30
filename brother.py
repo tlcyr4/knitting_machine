@@ -229,13 +229,10 @@ class brotherFile(object):
                 memoff = pptr
                 if self.verbose:
                     print "Memo #",patno, "offset ", memoff
-                bytes = bytesForMemo(rows)
-                patoff = pptr - bytes
+                patoff = pptr - bytesForMemo(rows)
                 if self.verbose:
                      print "Pattern #",patno, "offset ", patoff
                 pptr = pptr - bytesPerPatternAndMemo(stitches, rows)
-                if patno in (905,908):
-                    pptr += 0
                 if self.verbose:
                      print "Ending offset ", hex(pptr)
                 if patternNumber:
@@ -243,7 +240,6 @@ class brotherFile(object):
                         patlist.append({'number':patno, 'stitches':stitches, 'rows':rows, 'memo':memoff, 'pattern':patoff, 'pattend':pptr})
                 else:
                     patlist.append({'number':patno, 'stitches':stitches, 'rows':rows, 'memo':memoff, 'pattern':patoff, 'pattend':pptr})
-                    print "Append pattern:",'number',patno, 'stitches',stitches, 'rows',rows, 'memo',memoff, 'pattern',patoff, 'bytesPattern',bytesPerPatternAndMemo(stitches, rows), 'bytesMemo',bytesForMemo(rows), 'flag', flag
             else:
                 break
         return patlist
