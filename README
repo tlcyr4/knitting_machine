@@ -2,7 +2,16 @@ Please see the Changelog file for the latest changes
 
 === QUICK START ===
 
-Execute script guimain.py to start graphical application.
+
+Install python dependencies with pip and execute script guimain.py to start the
+graphical application.  If you do not have pip, follow install instructions at
+http://www.pip-installer.org/
+
+```
+pip install -r requirements.txt
+python guimain.py
+```
+
 This application can start floppy disk emulator and provides means to download/upload patterns and modify them.
 It is based on existing python scripts, which were slightly modified for better user experience in graphical application.
 
