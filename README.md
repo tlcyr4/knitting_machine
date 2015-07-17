@@ -40,7 +40,7 @@ The script has been renamed, and is now simply PDDemulate.py.
 
 The files in the top directory are the ones used for the knitting project that Becky Stern and Limor Fried did:
 
-http://blog.makezine.com/archive/2010/11/how-to_hacking_the_brother_kh-930e.html
+http://makezine.com/craft/hack_your_knitting_machine/
 http://blog.craftzine.com/archive/2010/11/hack_your_knitting_machine.html
 
 ##Subdirectories
